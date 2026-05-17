@@ -1,0 +1,373 @@
+=========AUtomation in Bug Bounty===========
+- Automation doesnt find bugs. 
+	`Automated workflows combined with manual validation`
+- Workflow pipelines:
+	> Monitor 1000+ targets
+	> Detect configuration changes in real time
+	> Alert attacker when high-alert vulnerabilities emerge.
+
+
+========Workflow Overview=========
+1. Automation
+2. Money Growth
+3. Time
+4. Human Validation
+- Automation alone wont make you rich: Top hunters use automation for reconnaissance
+and continuous monitoring, but manual analysis find high-value bugs.
+- Complete stack costs $0-50/month: All tools are open source; infrastrucute costs
+are your only expense(VPS, Cloud computing)
+- Realistice earnings timeline: Months 1-6 building the system($0 earned,
+Months 7-18 optimizing workflows($100-500/month), Year 2+ with mature system
+($10,000-10,000+/month)
+- The 60/40 rule: Successful hunters automate 60% of reconnaissance and monitoring, spend
+40% on manual testing and validation.
+MINDSET: Automation finds opportunities; humans find vulnerabilities.
+
+
+========Goals of Automation in Bug Bounty==============
+- COntinous subdomain monitoring accross 50+ programs
+- Automatic detection when new assets come online
+- Technology stack fingerprinting
+- Ports and service enumeration
+- JS endpoint extraction
+- Certificate transparency monitoring
+- Historical data collection from archives
+- Pattern matching for known misconfigurations
+
+
+=========Drawbacks of AUtomations==============
+- Understand basic logic
+- Chain vulnerabilities creatively
+- Test complex authentication flows
+- Identify subtle IDOR patterns
+- Analyze application-specific security flaws
+- Validate findings(reduce false positives)
+
+`Automation isn't just about running scripts--it's about running them smartly`
+
+
+==========Complete Automation Architecture==========
+- Hunters Architecture:
+	> Recon
+	> Crawling
+	> Scanning
+	> Storage
+	> Alerting
+
+
+
+=======Layer 1: Scope Management & Program Selection============
+Tools:
+> Bounty-targets-data(GitHub Repository)
+> Hourly-Updated dumps of all major platform scopes
+> HackerOne, BugCrowd, Intigriti, YesWeHack
+> Automatically pulls in-scope domains
+
+Installation:
+	kali> git clone https://github.com/arkadiyt/bounty-targets-data.git
+	kali> cd bounty-targets-data
+Data updates hourly via github actions!
+Why it matters: Instead of manually checking 50+ programs daily, this automatically
+tracks scope changes. When a company adds wildcards or new domains, you're notified
+immediately.
+====Custom Workflow Example====
+- Extract all wildcard scopes from HackerOne
+	kali> cat data/hackerone_data.json | jq -r '.[] | select(.offers_bounties==true) | .target
+Command:
+* Extracts wildcard URL domains from bounty-paying HackerOne programs and saves
+them for recon.
+
+
+==============Layer 2: Subdomain Discovery(Foundation)=======================
+- THis is where automation shines. Multiple tools aggregating data from different
+sources
+Primary Tools:
+1. Subfinder(ProjectDiscovery)
+- Subdomain discovery tool that returns valid subdomains for websites. Using
+passive online sources.
+- Installation:
+	kali> go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest
+- Basic usage:
+	kali> subfinder -d example.com> -all -recursive -o sudomains.txt
+- Use all sources with API keys:
+	kali> subfinder -d example.com -all -cs -o subs.txt
+Pro Configuration: "~/.config/subfinder/provider-config.yaml"
+- View the fields we can set
+	kali> less ~/.config/subfinder/provider-config.yaml 
+github: []
+hackertarget: []
+intelx: []
+leakix: []
+merklemap: []
+netlas: []
+onyphe: []
+profundis: []
+pugrecon: []
+quake: []
+reconeer: []
+redhuntlabs: []
+robtex: []
+rsecloud: []
+securitytrails: []
+shodan: []
+..............
+**********************************************************************
+
+
+2. Amass(OWASP Project)
+- Tool is used for asset discovery and network mapping.
+- Identifys:
+	> subdomains
+	> perform DNS enumeration
+	> Visualize relationships between discovered assets to asses potential vulnerabilities
+- Installation:
+	kali> go install -v github.com/owasp-amass/amass/v4/...@master
+- Advanced Enumeration with data sources:
+	kali> amass enum -passive -d example.com -config ~/.config/amass/config.ini -o amass_out.txt
+- Active enumeration(when in scope):
+	kali> amass enum -active -d example.com -brute -w wordlist.txt -o amass_active.txt
+
+3. Assetfinder(tomnomnom)
+- Finds domains and subdomains potentially related to a given domain.
+- Installation:
+	kali> go install github.com/tomnomnom/assetfinder@latest
+Command:
+	kali> assetfinder --subs-only example.com > assetfinder_out.txt
+
+4. Chaos(ProjectDiscovery)
+- Subdomain enumeration tool
+- Installation:
+	kali> go install -v github.com/projectdiscovery/chaos-client/cmd/chaos@latest
+	kali> export PATH=$PATH:$(go env GOPATH)/bin
+- COnfirm;
+	kali> chaos -h
+- Usage. Access project Discovery's Chaos Dataset
+	kali> chaos -d example.com -key YOUR_API_KEY -o chaos_out.txt
+GET_API_KEY: https://chaos.projectdiscovery.io/docs/api-key
+- These tools automatically find subdomains of a target domain using public
+data sources. 
+- Each tool pulls data from differnet places(DNS, search engines, APIs, cert logs)
+provides maximum coverage.
+- The output files will get:
+	> subdomains.txt
+	> amass_out.txt
+	> assetfinder_out.txt
+are used as base recon list for further testing:
+	* Alive check(httpx)
+	* Scanning(dnsx--> resolve to IPs, and naabu/masscan/nmap)
+	* Exploitation
+
+
+
+=============Power of Aggregation=============
+- Experience hunter shared their subdomain enumeration workflow that combines
+multiple tools.
+- The bash script:
+***************************************************
+
+***************************************************
+Tools in the script:
+	> Subfinder
+	> amass
+	> assetfinder
+	> tee: used to create new lines in the output file
+	> dnsgen: Generates intelligent domain name permutations from a list of known subdomains, aiding for subdomain discovery
+	> massdns: carries dns resolution.
+- WHy multiple tools?
+* Each uses different data sources providing 260+ unique subdomains.
+
+
+
+============Layer 3: Asset Probing & Discovery================
+Tools:
+1. httpx(ProjectDiscovery)
+- Installation:
+	kali> go install -v github.com/projectdiscovery/httpx/cmd/httpx@latest
+- Basic probing:
+	kali> cat sudomains.txt | httpx -silent -o live_hosts.txt
+- Advanced: Get titles, status codes, tech stack
+	kali> cat subdomains.txt | httpx -silent -title -status-code -tech-detect -follow-redirect -o httpx_results.txt
+- Screenshot capabilities:
+	kali> cat sudomains.txt | httpx -silent -screenshot -o screenshots/
+
+2. httprobe(tomnomonom)
+- Takes a list of domains and probe for working http and https servers.
+- Install:
+	kali> go install github.com/tomnomnom/httprobe@latest
+	kali> sudo cp ~/go/bin/httprobe /usr/local/bin/
+Usage:
+	kali> cat subdomains.txt | httprobe -c 50 > live_urls.txt
+Pro tip: httpx is more feature-rich and actively maintained. 
+- It can detect technologies(wappalyzer-style) and extract useful metadata in
+one pass.
+
+
+
+============Laye 4: Content Discovey & Crawling==============
+Tools:
+1. Katana(ProjectDiscovery)
+- Is a web crawler. Useful for hunting hidden endpoints
+- Web Crawling, referes to the process of automatically navigating through a
+website's structure to discover various resources such as web pages, files and
+scripts. 
+Done by following links and examining directories to create a map of a websites
+content. 
+- Installation:
+	kali> go install github.com/projectdiscovery/katana/cmd/katana@latest
+	kali> export PATH=$PATH:$(go env GOPATH)/bin
+- Crawl wth depth:
+	kali> katana -u https://example.com -d 5 -jc -kf all -o katana_results.txt
+- Crawl multiple URLs
+	kali> cat live_urls.txt | katana -d 3 -jc -aff -o crawled_endpoints.txt
+
+2. waybackurls
+- CLI tool that allows attackers to fetch historical URLs of a website from the
+wayback machine.
+- Install:
+	kali> go install github.com/tomnomnom/waybackurls@latest
+- Crawl with depth:
+	kali> echo "example.com" | waybackurls > wayback_urls.txt
+
+3. gau(GET ALL URLS)
+- Installation:
+	kali> go install github.com/lc/gau/v2/cmd/gau@latest
+- Aggregate URLs from multiple sources:
+	kali> echo "example" | gau --blacklist png, jpg, gif, css --threads 5 > gau_urls.txt
+
+4. hakrawler(hakluke)
+- Web crawler for gathering URLs and JS file locations.
+	kali> echo "https://example.com" | hakrawler -depth 3 -plain -usewayback -o hakrawler_out.txt
+
+Why it matters: 
+`A hunter analyzed that combining waybackurls, gau and active crawling with
+katana can reveal 3-5x more endpoints that crawling one alont.`
+- Can reveal endpoints from 2019? still accessible and often unpatched.
+
+
+==========Layer 5: JavaScript Analysis============
+1. LinkFInder(GerbenJavado)
+- Discoveres endpoints and their parameters in JavaScript files.
+- ALlows bug hunters to gather hidden endpoints in the websites they are testing
+- Resulting in a new testing ground, possibility containing new vulnerabilities
+GET TOOL:
+- Git Clone:
+	kali> git clone https://github.com/GerbenJavado/LinkFinder.git
+	kali> cd LinkFinder
+- Create a python virtual environment:
+	kali> python -m venv venv
+- Activate:
+	kali> source venv/bin/activate
+	kali> pip3 install -r requirements.txt
+- Find endpoints in JS files
+	kali> python3 linkfinder.py -i https://example.com/app.js -o results.html
+
+2. JSFinder
+- More faster that previous tool, written in golang
+- Scans web sites to find JavaScript files linked in the HTML source code.
+- Extratcs the URLs of the files to text file.
+- By analyzing the files discovered its possible to understand the functionality
+of the application and detect any security vulnerabilities or sensitive information
+leakage.
+	kali> go install -v github.com/kacakb/jsfinder@latest
+	kali> export PATH=$PATH:$(go env GOPATH)/bin
+	kali> jsfinder -h
+- Usage:
+	kali> echo https://example.com | jsfinder -read -s -o js.txt
+
+3. SecretFinder
+- Python script based on linkFinder.
+- Discovers sensitive data like:
+	> apikeys
+	> accesstoken
+	> authorization
+	> jwt
+	> Js Files
+- Install:
+	kali> git clone https://github.com/m4ll0k/SecretFinder.git
+- Set up python virtual environment:
+	kali> python -m venv venv
+	kali> source venv/bin/activate
+- Install tool requirements:
+	kali> pip3 install -r requirements.txt
+- Find API keys and tokens in JS files:
+	kali> python3 SecretFinder.py -i https://example.com/app.js -o secrets_output.html
+
+====REAL-WORLD Impact======
+- One researcher found AWS keys exposed in JavaScript files that led to full s3
+bucket access -- $15000 bounty. 
+- JS analysis is often overlooked by automated scanners.
+
+
+
+===========Layer 6: Vulnerability Scanning==================
+1. Nuclei(Project Discovery)
+- Customized vulnerability scanner that uses YAML-based templates to identify security
+issues across applications, networks and cloud configurations.
+- Supports over 6 protocols enabling targeted scanning for:
+	> CVE's
+	> Misconfigurations
+	> Subdomain takeovers
+- Can be added to CI/CD security intergration.
+- Installation:
+	kali> go install -v github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest
+- Add:
+	kali> export PATH=$(go env GOPATH)/bin:$PATH
+- Update templates:
+	kali> nuclei -update-templates
+- Basic Scan:
+	kali> nuclei -l live_urls.txt -o nuclei_results.txt
+- Severity-based Scanning:
+	kali> nuclei -l live_urls.txt -severity critical,high -o critical_bugs.txt
+- Custom templates:
+	kali> nuclei -l targets.txt -t ~/nuclei-templates/custom/ -o custom_scan.txt
+PRO CONFIGURATIONS:
+	- Create custom workflows with high-value templates
+*******************************************************
+kali> # Focus on misconfigurations and exposures
+nuclei -l urls.txt \
+  -t nuclei-templates/exposures/ \
+  -t nuclei-templates/misconfiguration/ \
+  -t nuclei-templates/vulnerabilities/ \
+  -severity high,critical \
+  -o high_value_findings.txt
+*******************************************************
+- If no templates were loaded go and gitclone the repository:
+	kali> mkdir -p ~/.local/share
+	kali> cd ~/.local/share
+	kali> git clone https://github.com/projectdiscovery/nuclei-templates
+	
+2 Ffuf(Fuzzing tool)
+- High speed🚀🚀web fuzzer written in GO.
+- Installation:
+	kali> go install github.com/ffuf/ffuf/v2@latest
+- Add:
+	kali>  export PATH=$PATH:$(go env GOPATH)/bin
+- Verify installation:
+	kali> ffuf -v
+- Virtual host discovery
+	kali> ffuf -u https://example.com -H "Host: FUZZ.example.com" -w subdomains.txt -mc 200
+- Parameter fuzzing
+	kali> ffuf -u https://example.com/api?FUZZ=value -w params.txt -mc 200
+
+
+==========Layer 8: Notification & Alerting=============
+- We will be using telegram
+- Generate token from Telegram bot father.
+- Install the telegram package:
+	kali> pip install telegram
+****************************************************
+import telebot
+bot = telebot.TeleBot("YOUR_BOT_TOKEN")
+def alert_finding(chat_id, finding):
+    message = f"""
+🎯 New Vulnerability Found!
+Type: {finding['type']}
+Severity: {finding['severity']}
+Target: {finding['url']}
+Time: {finding['timestamp']}
+    """
+    bot.send_message(chat_id, message)
+****************************************************
+- The goal above is we get an instant alert on Telegram when a bug is found
+and the exact endpoint with the bug.
+
