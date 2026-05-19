@@ -19,4 +19,14 @@ go install -v github.com/tomnomnom/gf@latest
 go install -v github.com/tomnomnom/qsreplace@latest
 go install -v github.com/hahwul/dalfox/v2@latest
 go install -v github.com/haccer/subjack@latest
-pip3 install uro
+
+# Install URO---> Python tool used to reclutter URL list for web crawling and security testing. Third party managed use pipx
+apt update
+apt install pipx -y
+
+pipx ensurepath
+
+pipx install uro
+
+#verify install
+uro --help
