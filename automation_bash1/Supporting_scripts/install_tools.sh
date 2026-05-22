@@ -28,6 +28,14 @@ mkdir -p ~/.gf
 git clone https://github.com/1ndianl33t/Gf-Patterns.git
 cp Gf-Patterns/*.json ~/.gf
 
+# install hakrawler
+go install github.com/hakluke/hakrawler@latest
+export PATH=$PATH:~/go/bin
+
+# unfurl for filtering
+go install github.com/tomnomnom/unfurl@latest
+export PATH=$PATH:~/go/bin
+
 # Install URO---> Python tool used to reclutter URL list for web crawling and security testing. Third party managed use pipx
 apt update
 apt install pipx -y
