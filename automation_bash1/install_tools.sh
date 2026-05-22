@@ -20,6 +20,14 @@ go install -v github.com/tomnomnom/qsreplace@latest
 go install -v github.com/hahwul/dalfox/v2@latest
 go install -v github.com/haccer/subjack@latest
 
+# Install GF(advanced grep tool) + gf patterns
+go install github.com/tomnomnom/gf@latest
+sudo cp ~/go/bin/gf /usr/local/bin/
+ # GF Patterns
+mkdir -p ~/.gf
+git clone https://github.com/1ndianl33t/Gf-Patterns.git
+cp Gf-Patterns/*.json ~/.gf
+
 # Install URO---> Python tool used to reclutter URL list for web crawling and security testing. Third party managed use pipx
 apt update
 apt install pipx -y
