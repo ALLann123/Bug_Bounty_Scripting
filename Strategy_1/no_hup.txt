@@ -1,0 +1,80 @@
+======Create a Long running script=======
+cat > test.sh << 'EOF'
+#!/usr/bin/env bash
+
+echo "Started: $(date)"
+
+for i in {1..60}; do
+    echo "Iteration $i - $(date)"
+    sleep 60
+done
+
+echo "[+]Get away with it"
+echo "Finished: $(date)"
+EOF
+
+chmod +x test.sh
+
+- This will run for an hour
+
+2. Start it with nohup
+	vps> nohup ./test.sh > test.log 2>&1 &
+echo $! > test.pid
+
+Output:
+[1] 12345
+The number is the PID
+Save the second echo command saves it to a file.
+
+3. Before disconnecting from VPS test it is running
+- This should be run where test.pid we saved is located
+	vps> ps -fp $(cat test.pid)
+OR
+- This we are using the exact process
+	vps> pgrep -af test.sh
+We should see the script running
+4. Close your session
+
+
+
+
+
+*********************************WORKFLOW_MY_EXAMPLE**********************************************
+ cat > expose_me.sh << 'EOF'
+#!/usr/bin/env bash
+
+echo "Started: $(date)"
+
+echo "[+]Own_The_net is Dark_Kernel!!"
+for i in {1..60}; do
+    echo "Iteration $i - $(date)"
+    sleep 60
+done
+
+echo "[+]Get away with it"
+echo "Finished: $(date)"
+EOF
+
+chmod +x expose_me.sh
+
+root@delux:~/dark_kernel/test_no_hup/another#
+root@delux:~/dark_kernel/test_no_hup/another#
+root@delux:~/dark_kernel/test_no_hup/another# ls
+expose_me.sh
+root@delux:~/dark_kernel/test_no_hup/another# nohup ./expose_me.sh > expose_me.log 2>&1 &
+echo $! > expose_me.pid
+[1] 36353
+root@delux:~/dark_kernel/test_no_hup/another#
+root@delux:~/dark_kernel/test_no_hup/another#
+root@delux:~/dark_kernel/test_no_hup/another#
+root@delux:~/dark_kernel/test_no_hup/another# cat expose_me.pid
+36353
+root@delux:~/dark_kernel/test_no_hup/another#
+root@delux:~/dark_kernel/test_no_hup/another#
+root@delux:~/dark_kernel/test_no_hup/another# ps -fp $(cat test.pid)
+UID          PID    PPID  C STIME TTY          TIME CMD
+root@delux:~/dark_kernel/test_no_hup/another# ps -fp $(cat expose_me.pid)
+UID          PID    PPID  C STIME TTY          TIME CMD
+root       36353   34275  0 10:11 pts/2    00:00:00 bash ./expose_me.sh
+
+***************************************************************************************************************

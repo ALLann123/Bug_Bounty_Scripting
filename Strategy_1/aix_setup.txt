@@ -1,0 +1,116 @@
+1. Set GPT-5-nano API key(temporary session)
+	vps> export OPENAI_API_KEY="sk-pr..."   # set this in your shell or .bashrc
+
+2. Then test(confirm it is configured):
+	vps> echo $OPENAI_API_KEY
+
+3. Now test it:
+	vps> aix -m "gpt-5-nano" -p "hello"
+
+***********************WORKFLOW*******************************
+aix -m "gpt-5-nano" -p "hello"
+
+   ___   _____  __
+  / _ | /  _/ |/_/
+ / __ |_/ /_>  <
+/_/ |_/___/_/|_|  Powered by OpenAI
+
+   projectdiscovery.io
+
+[INF] Current aix version v0.0.5 (latest)
+
+  Hello! How can I help today? I can:
+
+  • answer questions or explain topics
+...
+**************************************************************
+
+4. Additional context we have the
+	-sc, -system-context string[] ----> system message to send to the model(optional)
+Now run:
+	vps> aix -m "gpt-5-nano" - sc "You are a Penetration Tester" -p "How to run nuclei on wayback results"
+
+*****************************************THE ABOVE********************************************************
+aix -m "gpt-5-nano" - sc "You are a Penetration Tester" -p "How to run nuclei on wayback results"
+
+   ___   _____  __
+  / _ | /  _/ |/_/
+ / __ |_/ /_>  <
+/_/ |_/___/_/|_|  Powered by OpenAI
+
+   projectdiscovery.io
+
+[INF] Current aix version v0.0.5 (latest)
+
+  Here’s a safe, practical workflow to run Nuclei on archived (Wayback) URLs.
+  This assumes you have explicit permission to test the scope you’re
+  targeting.
+
+  What you’ll need
+
+  • Nuclei installed and up to date: nuclei -update-templates
+  • A wayback URL collector, e.g. waybackurls (TomNomNom) or the Wayback CDX
+  API
+  • A list of URLs from Wayback that you want to test
+
+  Option A: using waybackurls to generate the list
+
+  1. Install and fetch archived URLs
+
+  • Install (if not already): go install
+  github.com/tomnomnom/waybackurls@latest
+  • Generate URLs for a domain:
+  waybackurls example.com > wayback_urls.txt
+
+  2. Clean up (optional but recommended)
+
+  • Deduplicate and keep only http(s) URLs:
+  sort -u wayback_urls.txt | grep '^http' > wayback_urls_final.txt
+
+  3. Run Nuclei against the list
+
+  • Make sure templates are up to date:
+  nuclei -update-templates
+  • Scan using a broad set of templates (adjust paths as needed)
+  nuclei -l wayback_urls_final.txt -t templates/ -o nuclei_wayback_results.txt -c
+  50
+
+  Notes:
+
+  • -l is the input list of URLs.
+  • -t templates/ points to the built-in templates; you can also target specific
+  templates, e.g. -t templates/http/ -t templates/vulnerabilities/.
+  • -c controls concurrency; adjust based on your host/network policy.
+
+  Option B: using Wayback CDX API (no extra tool)
+
+  1. Grab archived URLs via CDX
+
+  • Example (outputs original URLs):
+  curl -s
+  "https://web.archive.org/cdx/search/cdx?url=example.com/*&output=text&fl=original&collapse=urlkey"
+  | tail -n +2 > wayback_urls.txt
+
+  2. Filter and dedupe (same as above)
+
+  • sort -u wayback_urls.txt > wayback_urls_final.txt
+
+  3. Run Nuclei as in Option A
+
+  Helpful tips
+
+  • Scope and safety: Only scan targets you are authorized to test. Archived
+  URLs can include lots of assets you wouldn’t scan in normal testing.
+  • Narrow the templates if you want focused results: e.g. nuclei -l
+  wayback_urls_final.txt -t templates/http/ -t templates/cves/ -o
+  results_http_and_cves.txt
+  • Rate and resource control: use -c to limit concurrency; consider adding -sn
+  to skip hosts with known safe status or use a small subset first.
+  • Post-processing: you can grep or parse nuclei results to focus on high
+  severity findings.
+
+  If you share your exact OS, shell, and which templates you want to use, I
+  can tailor the exact one-liner or a short script for you. Also I can help
+  with filtering out noisy results (static assets, redirects, etc.) so you get
+  actionable findings.
+***********************************************************************************************************
