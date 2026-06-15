@@ -1,2 +1,2 @@
-# Bug_Bounty_Scripting
+# Bug_Bounty_Scripting 
 Python, Bash, Golang
