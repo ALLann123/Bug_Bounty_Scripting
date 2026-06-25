@@ -1,0 +1,116 @@
+==============CyberSecurity Agent LangGraph===========
+- AI agents are softwares that can think and take actions autonomously like humans.
+- LangGraph a powerful framework for creating agent workflows.
+- LLMs limitation: is a text predictor, and are very good at generating text.
+
+=====What is an AI Agent?=====
+- An agent takes autonomous actions to complete our goal
+i.e. ReAct(Reason and Action)
+- AI Agent:
+	> Brain(LLM)e.g GPT, DeepSeek, Claude:
+- Understand instructions
+- Makes Decisions
+- Generate Response
+
+	> Tools:
+- Actions the agent can take
+- Search, Calculate, Execute, Fetch e.t.c
+
+	> Memory/State
+- Remembers conversation history
+- Tracks what's been done
+- Stores intermediate results
+
+AI Agent= LLM + Tools + Memory + Planning
+Def---> An Autonoumous System that can perceive, decide, act and learn to achieve specific goals.
+
+
+======The ReAct Framework--How Agents Actually Think======
+- An agent needs a structured way to think through problems and decide when to use which tool
+- ReAct stands fro Reasoning and Acting
+- All agent frameworks use it under the hood
+
+=====The Core Idea=====
+- ReAct is simple:
+The agent follows the loop of Think--> Act--> Observer--> Repeat
+1. Think
+- The Agent reasons about what it needs to do next
+
+2. Act
+- It takes an action(usually calling a tool)
+
+3. Observe
+- It looks at the result of that action
+
+4. Repeat
+- Based on what it observed, it thinks again and decides the next step.
+
+This goes on until the agent decides it has finally has enough information to provide 
+an answer.
+
+======An Example======
+- DNS resolution of Domain to its IP address
+- Looks for open ports using shodan
+
+=====Why This Matters=====
+- The ReAct pattern is powerful because it gives the LLM a structured way to break down
+complex tasks.
+- An added advantage is LLM APIs support function calling natively, which means the LLMoutputs
+structured JSON for tool invocations. LangGraph leverages this under the hood🔥🔥
+
+====Why not LangCHain=====
+1. The Black BOx
+- Runs your agent in a loop internally hence difficult to debug
+
+2. Limited Control Flow
+- Some features we need like:
+	a. Asking human approval before running an active scan(Human-Inthe-Loop)
+	b. Run multiple tools in parallel
+	c. Take different paths based on intermediate results
+	d. Retry specific step without restarting everything
+
+3. No Built-in Persistence
+- There is no way to save agent's state and resume later.
+
+4. Multi-Agent Coordination
+-  Modern AI applications require multiple specialized agents working together.
+Example:
+a. A recon agent that finds subdomains
+b. A vulnerability Agent checking for CVEs
+c. A reporting Agent that summarized findings
+- The above coordination in langChain is hectic😪
+
+
+======Enter LangGraph=======
+- LangGraph was created to solve the above short comings of langChain.
+- The core idea is simple but powerful:
+	> make the agent's execution flow explicit as a graph.
+- No hidden loop, instead we define:
+	a. Nodes: Functions that do the work(call LLM, run tool, process data)
+	b. Edges: How execution flows between nodes
+	c. State: Data that gets passed between nodes and saved automatically.
+- With langGraph we explicitly define this flow:
+
+*********************************************************
+from langgraph.graph import StateGraph, START, END
+
+builder = StateGraph(AgentState)
+
+# Add your nodes
+builder.add_node("think", reasoning_function)
+builder.add_node("act", tool_execution_function)
+builder.add_node("evaluate", check_if_done_function)
+
+# Define exactly how execution flows
+builder.add_edge(START, "think")
+builder.add_edge("think", "act")
+builder.add_conditional_edges(
+    "act", 
+    should_we_continue,  # Your function that decides
+    {"yes": "think", "no": END}
+)
+
+graph = builder.compile()
+
+*********************************************************
+
